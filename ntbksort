@@ -1,0 +1,86 @@
+--[[ Main file
+
+Handles bulk of stuff
+
+NOTE
+If you see something thats global but should be local, its probably global for debugging purposes.
+
+]]--
+
+--[[ Local vars ]]
+
+--[[ Local functions ]]
+
+--[[ Lets the user choose an option from a table
+Parameters
+tbl - table of choices - must use number keys and string or number values
+prompt - text shown at top of screen above options
+obj - terminal object to draw prompt in
+Returns
+number/nil key
+string/nil value
+nil/string error
+
+TESTED - WORKS
+]]--
+local function selectionList(tbl, prompt, obj)
+	local prompt = prompt or "Choose an option:"
+	local oldterm
+	if obj then oldterm = term.current() term.redirect(obj) end
+	local offset = 0
+	term.setCursorBlink(false)
+	term.setTextColor(colors.white)
+	term.setBackgroundColor(colors.gray)
+	local w,h = term.getSize()
+	if w < 10 then return nil, nil, "width too low" end
+	if h < 10 then return nil, nil, "height too low" end
+	if #tbl < 1 then return nil, nil, "no table elements" end
+	term.clear()
+	term.setCursorPos(2, 1)
+	local selected = 1
+	local function drawOptions(tbl, selected, offset, prompt)
+		term.setCursorPos(2,1)
+		term.setBackgroundColor(colors.gray)
+		print(prompt)
+		for i, v in ipairs(tbl) do
+			term.setCursorPos(2, i + 1)
+			if i == selected then
+				term.setBackgroundColor(colors.green)
+				term.clearLine()
+				term.write("> "..v)
+			else
+				term.setBackgroundColor(colors.gray)
+				term.clearLine()
+				term.write("  "..v)
+			end
+		end
+	end
+	while true do
+		drawOptions(tbl, selected, offset, prompt)
+		local e, a, b, c, d = os.pullEvent()
+		if e == "key" and a == 200 then
+			selected = selected - 1
+			if selected < 1 then selected = 1 end
+		end
+		if e == "key" and a == 208 then
+			selected = selected + 1
+			if selected > #tbl then selected = #tbl end
+		end
+		if e == "key" and a == 28 then
+			break
+		end
+	end
+	term.setCursorPos(1,1)
+	term.setTextColor(colors.white)
+	term.setBackgroundColor(colors.black)
+	term.clear()
+	term.setCursorBlink(false)
+	if oldterm then term.redirect(oldterm) end
+	return selected, tbl[selected]
+end
+--[[ Config file prep ]]--
+local config
+if not fs.exists("ntbksort.config") then
+	local defaultConf = {}
+
+end
