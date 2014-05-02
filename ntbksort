@@ -23,11 +23,11 @@ nil/string error
 
 TESTED - WORKS
 ]]--
-local function selectionList(tbl, prompt, obj)
+function listPrompt(tbl, prompt, obj)
 	local prompt = prompt or "Choose an option:"
 	local oldterm
-	if obj then oldterm = term.current() term.redirect(obj) end
-	local offset = 0
+	local obj = obj or term.current()
+	oldterm = term.current() term.redirect(obj)
 	term.setCursorBlink(false)
 	term.setTextColor(colors.white)
 	term.setBackgroundColor(colors.gray)
@@ -38,12 +38,17 @@ local function selectionList(tbl, prompt, obj)
 	term.clear()
 	term.setCursorPos(2, 1)
 	local selected = 1
-	local function drawOptions(tbl, selected, offset, prompt)
+	local function drawOptions(tbl, selected, prompt)
 		term.setCursorPos(2,1)
+		term.clear()
 		term.setBackgroundColor(colors.gray)
-		print(prompt)
+		local _,h = term.getSize()
+		local offset = 0
+		if selected > (h / 2) - 1 then
+			offset = ((h / 2) -1) - selected
+		end
 		for i, v in ipairs(tbl) do
-			term.setCursorPos(2, i + 1)
+			term.setCursorPos(2, i + 1 + offset)
 			if i == selected then
 				term.setBackgroundColor(colors.green)
 				term.clearLine()
@@ -54,9 +59,12 @@ local function selectionList(tbl, prompt, obj)
 				term.write("  "..v)
 			end
 		end
+		term.setCursorPos(2,1)
+		term.setBackgroundColor(colors.gray)
+		print(prompt)
 	end
 	while true do
-		drawOptions(tbl, selected, offset, prompt)
+		drawOptions(tbl, selected, prompt)
 		local e, a, b, c, d = os.pullEvent()
 		if e == "key" and a == 200 then
 			selected = selected - 1
@@ -66,7 +74,7 @@ local function selectionList(tbl, prompt, obj)
 			selected = selected + 1
 			if selected > #tbl then selected = #tbl end
 		end
-		if e == "key" and a == 28 then
+		if e == "key" and (a == 28 or a == 57) then
 			break
 		end
 	end
@@ -75,7 +83,7 @@ local function selectionList(tbl, prompt, obj)
 	term.setBackgroundColor(colors.black)
 	term.clear()
 	term.setCursorBlink(false)
-	if oldterm then term.redirect(oldterm) end
+	term.redirect(oldterm)
 	return selected, tbl[selected]
 end
 --[[ Config file prep ]]--
