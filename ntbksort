@@ -2,7 +2,7 @@ term.clear()
 term.setCursorPos(1,1)
 
 if not ui then
-	os.loadAPI(shell.resolveProgram(shell.getRunningProgram()).."ui")
+	os.loadAPI(fs.combine(fs.getDir(shell.getRunningProgram()),"apis/ui"))
 end
 
 print("Finding valid desks...")
