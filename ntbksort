@@ -1,155 +1,78 @@
---[[ Main file
-
-Handles bulk of stuff
-
-NOTE
-If you see something thats global but should be local, its probably global for debugging purposes.
-
-]]--
-
---[[ Local vars ]]
-
---[[ Local functions ]]
-
---[[ Lets the user choose an option from a table
-Parameters
-tbl - table of choices - must use number keys and string or number values
-prompt - text shown at top of screen above options
-obj - terminal object to draw prompt in
-Returns
-number/nil key
-string/nil value
-nil/string error
-
-TESTED - WORKS
-]]--
-function listPrompt(tbl, prompt, obj)
-	local prompt = prompt or "Choose an option:"
-	local oldterm
-	local obj = obj or term.current()
-	oldterm = term.current() term.redirect(obj)
-	term.setCursorBlink(false)
-	term.setTextColor(colors.white)
-	term.setBackgroundColor(colors.gray)
-	local w,h = term.getSize()
-	if w < 10 then return nil, nil, "width too low" end
-	if h < 4 then return nil, nil, "height too low" end
-	if #tbl < 1 then return nil, nil, "no table elements" end
-	term.clear()
-	term.setCursorPos(2, 1)
-	local selected = 1
-	local function drawOptions(tbl, selected, prompt)
-		term.setCursorPos(2,1)
-		term.clear()
-		term.setBackgroundColor(colors.gray)
-		local _,h = term.getSize()
-		local offset = 0
-		if selected > (h / 2) - 1 then
-			offset = ((h / 2) -1) - selected
-		end
-		for i, v in ipairs(tbl) do
-			term.setCursorPos(2, i + 1 + offset)
-			if i == selected then
-				term.setBackgroundColor(colors.green)
-				term.clearLine()
-				term.write("> "..v)
-			else
-				term.setBackgroundColor(colors.gray)
-				term.clearLine()
-				term.write("  "..v)
-			end
-		end
-		term.setCursorPos(2,1)
-		term.setBackgroundColor(colors.gray)
-		print(prompt)
-	end
-	while true do
-		drawOptions(tbl, selected, prompt)
-		local e, a, b, c, d = os.pullEvent()
-		if e == "key" and a == 200 then
-			selected = selected - 1
-			if selected < 1 then selected = 1 end
-		end
-		if e == "key" and a == 208 then
-			selected = selected + 1
-			if selected > #tbl then selected = #tbl end
-		end
-		if e == "key" and (a == 28 or a == 57) then
-			break
-		end
-	end
-	term.setCursorPos(1,1)
-	term.setTextColor(colors.white)
-	term.setBackgroundColor(colors.black)
-	term.clear()
-	term.setCursorBlink(false)
-	term.redirect(oldterm)
-	return selected, tbl[selected]
+term.clear()
+term.setCursorPos(1,1)
+ 
+print("Finding valid desks...")
+local desks = {}
+for k,v in pairs(peripheral.getNames()) do
+        if peripheral.getType(v) == "writing_desk" then
+                table.insert(desks,v)
+        end
 end
-
---[[ Wrapper for listPrompt to give the user a yes/no choice
-Parameters
-prompt - text to show at top of screen, above options
-obj - optional redirect object
-Returns
-boolean - true = yes, false = no
-]]--
-function ynPrompt(prompt,obj)
-	return listPrompt({"Yes","No"},prompt,obj) == 1
+local desk = peripheral.wrap(desks[ui.listPrompt(desks,"Choose a writing desk:")])
+ 
+print("Finding notebooks...")
+local notebooks = {}
+for i = 1, desk.getMaxNotebookCount() do
+        local ok, val = pcall(function() desk.getNotebookSize(i) end)
+        if ok then
+                table.insert(notebooks,i)
+        end
 end
-
---[[ Parse string into a table of lines that can fit the constraint
-
-]]--
-function parseLines(text,constraint)
-	local words = {}
-	local word = ""
-	for i = 1, #text do
-		if text:sub(i,i) == " " then
-			table.insert(words, word)
-			word = ""
-		else
-			word = word .. text:sub(i,i)
-		end
-	end
-	table.insert(words, word)
-	local lines = {}
-	local line = ""
-	for i,v in ipairs(words) do
-		if #line + #v + 1 > constraint then
-			table.insert(lines, line)
-			line = v
-		else
-			if line ~= "" then
-				line = line .. " " .. v
-			else
-				line = v
-			end
-		end
-	end
-	table.insert(lines,line)
-	return lines
+ 
+local notebooknames = {}
+for i,v in ipairs(notebooks) do
+        notebooknames[i] = desk.getNotebookName(v) or "<unnamed>"
 end
-
---[[ Shows a dialog box
-
-]]--
-function diagBox(info,obj)
-	local obj = obj or term.current()
-	local oldterm = term.current()
-	term.redirect(obj)
-	local w,h = term.getSize()
-	term.setBackgroundColor(colors.gray)
-	term.setTextColor(colors.white)
-	term.setCursorBlink(false)
-	term.clear()
-
-	term.redirect(oldterm)
+ 
+local notebookslot = notebooks[ui.listPrompt(notebooknames,"Choose a notebook to move all pages to:")]
+ 
+print("Moving all pages... (This may take a bit!)")
+for i,v in ipairs(notebooks) do
+        --Loop through all notebook slots
+        if desk.getNotebookSize(v) > 0 and v ~= notebookslot then
+                for j = 1, desk.getLastNotebookSlot(v) do
+                        print("Notebook "..v..", page slot "..j)
+                        sleep(0)
+                        if desk.getNotebookStackInSlot(v,j) then
+                                desk.pushNotebookPage(v, "down", j, 1)
+                                desk.pullNotebookPage(notebookslot, "down", 1)
+                        end
+                end
+        end
 end
-
---[[ Config file prep ]]--
-local config
-if not fs.exists("ntbksort.config") then
-	local defaultConf = {}
-
+ 
+print("Finding notebooks...")
+local notebooks = {}
+for i = 1, desk.getMaxNotebookCount() do
+        local ok, val = pcall(function() desk.getNotebookSize(i) end)
+        if ok and i ~= notebookslot then
+                table.insert(notebooks,i)
+        end
 end
+ 
+local notebooknames = {}
+for i,v in ipairs(notebooks) do
+        notebooknames[i] = desk.getNotebookName(v) or "<unnamed>"
+end
+ 
+local sortedslot = notebooks[ui.listPrompt(notebooknames,"Choose a notebook to sort pages into:")]
+ 
+local pages = {}
+print("Sorting pages... (This may take a bit!)")
+for j = 1, desk.getLastNotebookSlot(notebookslot) do
+        print("Notebook "..notebookslot..", page slot "..j)
+        sleep(0)
+        if desk.getNotebookStackInSlot(notebookslot,j) then
+                if not pages[desk.getNotebookStackInSlot(notebookslot,j).symbol] then
+                        local symbol = desk.getNotebookStackInSlot(notebookslot,j).symbol
+                        desk.pushNotebookPage(notebookslot, "down", j, 1)
+                        desk.pullNotebookPage(sortedslot, "down", 1)
+                        pages[symbol] = true
+                end
+        end
+end
+term.clear()
+term.setCursorPos(1,1)
+print("Sorting complete!")
+print("Notebook " .. sortedslot .. " (" .. (desk.getNotebookName(sortedslot) or "unnamed") .. ") contains one copy of each page found.")
+print("Notebook " .. notebookslot .. " (" .. (desk.getNotebookName(notebookslot) or "unnamed") .. ") contains all extra pages found.")
