@@ -1,75 +1,79 @@
 term.clear()
 term.setCursorPos(1,1)
- 
+
+if not ui then
+	os.loadAPI(shell.resolveProgram(shell.getRunningProgram()).."ui")
+end
+
 print("Finding valid desks...")
 local desks = {}
 for k,v in pairs(peripheral.getNames()) do
-        if peripheral.getType(v) == "writing_desk" then
-                table.insert(desks,v)
-        end
+	if peripheral.getType(v) == "writing_desk" then
+		table.insert(desks,v)
+	end
 end
 local desk = peripheral.wrap(desks[ui.listPrompt(desks,"Choose a writing desk:")])
- 
+
 print("Finding notebooks...")
 local notebooks = {}
 for i = 1, desk.getMaxNotebookCount() do
-        local ok, val = pcall(function() desk.getNotebookSize(i) end)
-        if ok then
-                table.insert(notebooks,i)
-        end
+	local ok, val = pcall(function() desk.getNotebookSize(i) end)
+	if ok then
+		table.insert(notebooks,i)
+	end
 end
- 
+
 local notebooknames = {}
 for i,v in ipairs(notebooks) do
-        notebooknames[i] = desk.getNotebookName(v) or "<unnamed>"
+	notebooknames[i] = desk.getNotebookName(v) or "<unnamed>"
 end
- 
+
 local notebookslot = notebooks[ui.listPrompt(notebooknames,"Choose a notebook to move all pages to:")]
- 
+
 print("Moving all pages... (This may take a bit!)")
 for i,v in ipairs(notebooks) do
-        --Loop through all notebook slots
-        if desk.getNotebookSize(v) > 0 and v ~= notebookslot then
-                for j = 1, desk.getLastNotebookSlot(v) do
-                        print("Notebook "..v..", page slot "..j)
-                        sleep(0)
-                        if desk.getNotebookStackInSlot(v,j) then
-                                desk.pushNotebookPage(v, "down", j, 1)
-                                desk.pullNotebookPage(notebookslot, "down", 1)
-                        end
-                end
-        end
+--Loop through all notebook slots
+if desk.getNotebookSize(v) > 0 and v ~= notebookslot then
+	for j = 1, desk.getLastNotebookSlot(v) do
+		print("Notebook "..v..", page slot "..j)
+		sleep(0)
+		if desk.getNotebookStackInSlot(v,j) then
+			desk.pushNotebookPage(v, "down", j, 1)
+			desk.pullNotebookPage(notebookslot, "down", 1)
+		end
+	end
 end
- 
+end
+
 print("Finding notebooks...")
 local notebooks = {}
 for i = 1, desk.getMaxNotebookCount() do
-        local ok, val = pcall(function() desk.getNotebookSize(i) end)
-        if ok and i ~= notebookslot then
-                table.insert(notebooks,i)
-        end
+	local ok, val = pcall(function() desk.getNotebookSize(i) end)
+	if ok and i ~= notebookslot then
+		table.insert(notebooks,i)
+	end
 end
- 
+
 local notebooknames = {}
 for i,v in ipairs(notebooks) do
-        notebooknames[i] = desk.getNotebookName(v) or "<unnamed>"
+	notebooknames[i] = desk.getNotebookName(v) or "<unnamed>"
 end
- 
+
 local sortedslot = notebooks[ui.listPrompt(notebooknames,"Choose a notebook to sort pages into:")]
- 
+
 local pages = {}
 print("Sorting pages... (This may take a bit!)")
 for j = 1, desk.getLastNotebookSlot(notebookslot) do
-        print("Notebook "..notebookslot..", page slot "..j)
-        sleep(0)
-        if desk.getNotebookStackInSlot(notebookslot,j) then
-                if not pages[desk.getNotebookStackInSlot(notebookslot,j).symbol] then
-                        local symbol = desk.getNotebookStackInSlot(notebookslot,j).symbol
-                        desk.pushNotebookPage(notebookslot, "down", j, 1)
-                        desk.pullNotebookPage(sortedslot, "down", 1)
-                        pages[symbol] = true
-                end
-        end
+	print("Notebook "..notebookslot..", page slot "..j)
+	sleep(0)
+	if desk.getNotebookStackInSlot(notebookslot,j) then
+		if not pages[desk.getNotebookStackInSlot(notebookslot,j).symbol] then
+			local symbol = desk.getNotebookStackInSlot(notebookslot,j).symbol
+			desk.pushNotebookPage(notebookslot, "down", j, 1)
+			desk.pullNotebookPage(sortedslot, "down", 1)
+			pages[symbol] = true
+		end
+	end
 end
 term.clear()
 term.setCursorPos(1,1)
